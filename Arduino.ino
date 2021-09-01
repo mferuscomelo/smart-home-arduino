@@ -1,6 +1,7 @@
 #include <ArduinoBLE.h>
-#include <Arduino_HTS221.h>
-#include <Arduino_LSM9DS1.h>
+#include <Arduino_HTS221.h> // Temperature & Humidity
+#include <Arduino_LSM9DS1.h> // Magnetometer
+#include <Arduino_LPS22HB.h> // Pressure
 
 #define LEDR (22u)
 #define LEDG (23u)
@@ -63,6 +64,9 @@ void setup() {
   // Initialize HTS
   initHTS();
 
+  // Initialize Baro
+  initBaro();
+
   // Initialize BLE
   initBLE();
 }
@@ -89,24 +93,41 @@ void loop() {
     }
   }
 
-  // Humidity & temperature
+  // Humidity, temperature, and pressure
   if(millis() - lastRefreshTime > INTERVAL) {
     lastRefreshTime = millis();
 
     float temperature = HTS.readTemperature();
     float humidity = HTS.readHumidity();
+    float pressure = BARO.readPressure();
 
     String temperatureString = String("temperature: ") + String(temperature, 2);
     String humidityString = String("humidity: ") + String(humidity, 2);
+    String pressureString = String("pressure: ") + String(pressure, 2);
 
     writeChar.writeValue(temperatureString.c_str());
     writeChar.writeValue(humidityString.c_str());
+    writeChar.writeValue(pressureString.c_str());
   }
 }
 
 void initIMU() {
   if (!IMU.begin()) {
     Serial.println("Failed to initialize IMU!");
+    while (1);
+  }
+}
+
+void initHTS() {
+  if (!HTS.begin()) {
+    Serial.println("Failed to initialize humidity temperature sensor!");
+    while (1);
+  }
+}
+
+void initBaro() {
+  if (!BARO.begin()) {
+    Serial.println("Failed to initialize pressure sensor!");
     while (1);
   }
 }
@@ -160,13 +181,6 @@ void initBLE() {
   Serial.println("Bluetooth device active, waiting for connections...");
 
   showYellowLight();
-}
-
-void initHTS() {
-  if (!HTS.begin()) {
-    Serial.println("Failed to initialize humidity temperature sensor!");
-    while (1);
-  }
 }
 
 
