@@ -1,9 +1,12 @@
 #include <ArduinoBLE.h>
+#include <Arduino_HTS221.h>
 #include <Arduino_LSM9DS1.h>
 
 #define LEDR (22u)
 #define LEDG (23u)
 #define LEDB (24u)
+
+#define INTERVAL 10000 // ms
 
 #define DEBUG true // Comment this out to compile code for production
 
@@ -44,6 +47,7 @@ BLECharacteristic readChar(uuidOfReadChar, BLEWriteWithoutResponse | BLEWrite, W
 BLECharacteristic writeChar(uuidOfWriteChar, BLERead | BLENotify | BLEBroadcast, "123456789123456789123456789123456789123456789123456789123456789123456789");
 
 bool isOpen = false;
+unsigned long lastRefreshTime = 0;
 
 void setup() {
   Serial.begin(9600);
@@ -56,6 +60,9 @@ void setup() {
   // Initialize IMU
   initIMU();
 
+  // Initialize HTS
+  initHTS();
+
   // Initialize BLE
   initBLE();
 }
@@ -63,6 +70,7 @@ void setup() {
 void loop() {
   BLEDevice central = BLE.central();
 
+  // Door
   if (IMU.magneticFieldAvailable()) {
     float xMag, yMag, zMag;
 
@@ -79,6 +87,20 @@ void loop() {
       writeChar.writeValue("notifications: Door has been closed");
       isOpen = false;
     }
+  }
+
+  // Humidity & temperature
+  if(millis() - lastRefreshTime > INTERVAL) {
+    lastRefreshTime = millis();
+
+    float temperature = HTS.readTemperature();
+    float humidity = HTS.readHumidity();
+
+    String temperatureString = String("temperature: ") + String(temperature, 2);
+    String humidityString = String("humidity: ") + String(humidity, 2);
+
+    writeChar.writeValue(temperatureString.c_str());
+    writeChar.writeValue(humidityString.c_str());
   }
 }
 
@@ -138,6 +160,13 @@ void initBLE() {
   Serial.println("Bluetooth device active, waiting for connections...");
 
   showYellowLight();
+}
+
+void initHTS() {
+  if (!HTS.begin()) {
+    Serial.println("Failed to initialize humidity temperature sensor!");
+    while (1);
+  }
 }
 
 
