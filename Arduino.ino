@@ -5,7 +5,7 @@
 #define LEDG (23u)
 #define LEDB (24u)
 
-// #define DEBUG true // Comment this out to compile code for production
+#define DEBUG true // Comment this out to compile code for production
 
 // Replacement class for Serial
 #if !DEBUG
@@ -26,8 +26,27 @@ class NullSerialClass
 #define Serial NullSerial
 #endif
 
+// Device info
+const char* nameOfPeripheral = "Arduino Nano 33 BLE Sense";
+const char* uuidOfService = "00001101-0000-1000-8000-00805f9b34fb";
+const char* uuidOfReadChar = "00001142-0000-1000-8000-00805f9b34fb";
+const char* uuidOfWriteChar = "00001143-0000-1000-8000-00805f9b34fb";
+
+// BLE Service
+BLEService IMUService(uuidOfService);
+
+// Setup the incoming data characteristic.
+const int WRITE_BUFFER_SIZE = 256;
+bool WRITE_BUFFER_FIXED_LENGTH = false;
+
+// Read / Write Characteristics
+BLECharacteristic readChar(uuidOfReadChar, BLEWriteWithoutResponse | BLEWrite, WRITE_BUFFER_SIZE, WRITE_BUFFER_FIXED_LENGTH);
+BLECharacteristic writeChar(uuidOfWriteChar, BLERead | BLENotify | BLEBroadcast, "123456789123456789123456789123456789123456789123456789123456789123456789");
+
 void setup() {
   Serial.begin(9600);
+  while (!Serial);
+  Serial.println("Started");
 
   // Initialize LED pins
   initLED();
@@ -35,29 +54,21 @@ void setup() {
   // Initialize IMU
   initIMU();
 
-  Serial.print("Magnetic field sample rate = ");
-  Serial.print(IMU.magneticFieldSampleRate());
-  Serial.println(" uT");
-  Serial.println();
-  Serial.println("Magnetic Field in uT");
-  Serial.println("X\tY\tZ");
+  // Initialize BLE
+  initBLE();
 }
 
 void loop() {
+  BLEDevice central = BLE.central();
+
   if (IMU.magneticFieldAvailable()) {
     float xMag, yMag, zMag;
 
     IMU.readMagneticField(xMag, yMag, zMag);
 
-    Serial.print(xMag);
-    Serial.print('\t');
-    Serial.print(yMag);
-    Serial.print('\t');
-    Serial.println(zMag);
-
     if(zMag < 350) {
       showRedLight();
-      Serial.println("Door opened");
+      Serial.println("Door open");
     } else {
       turnOffLED();
       Serial.println("Door closed");
@@ -81,11 +92,96 @@ void initLED() {
   turnOffLED();
 }
 
+void initBLE() {
+  if (!BLE.begin()) {
+    Serial.println("Failed to initialize BLE!");
+    while (1);
+  }
+
+  // Create BLE service and characteristics.
+  BLE.setLocalName(nameOfPeripheral);
+  BLE.setAdvertisedService(IMUService);
+  IMUService.addCharacteristic(readChar);
+  IMUService.addCharacteristic(writeChar);
+  BLE.addService(IMUService);
+
+  // Bluetooth LE connection handlers.
+  BLE.setEventHandler(BLEConnected, onBLEConnected);
+  BLE.setEventHandler(BLEDisconnected, onBLEDisconnected);
+
+  // Event driven reads.
+  readChar.setEventHandler(BLEWritten, onGetData);
+
+  // Let's tell devices about us.
+  BLE.advertise();
+
+  // Print out full UUID and MAC address.
+  Serial.println("Peripheral advertising info: ");
+  Serial.print("Name: ");
+  Serial.println(nameOfPeripheral);
+  Serial.print("MAC: ");
+  Serial.println(BLE.address());
+  Serial.print("Service UUID: ");
+  Serial.println(IMUService.uuid());
+  Serial.print("readCharacteristic UUID: ");
+  Serial.println(uuidOfReadChar);
+  Serial.print("writeCharacteristic UUID: ");
+  Serial.println(uuidOfWriteChar);
+
+
+  Serial.println("Bluetooth device active, waiting for connections...");
+
+  showYellowLight();
+}
+
+
+
+/*
+  BLE
+*/
+
+void onGetData(BLEDevice central, BLECharacteristic characteristic) {
+  byte bytes[256];
+  int bytesLength = readChar.readValue(bytes, 256);
+
+  String command = "";
+  for (int i = 0; i < bytesLength; i++) {
+    command += (char)bytes[i];
+  }
+
+  Serial.print("Received Command: ");
+  Serial.println(command);
+
+  if(command == "verify_connection") {
+    writeChar.writeValue("y");
+  }
+}
+
+void onBLEConnected(BLEDevice central) {
+  Serial.print("Connected event, central: ");
+  Serial.println(central.address());
+  showGreenLight();
+}
+
+void onBLEDisconnected(BLEDevice central) {
+  Serial.print("Disconnected event, central: ");
+  Serial.println(central.address());
+  showYellowLight();
+}
+
+
+
 /*
   LED
 */
 void showGreenLight() {
   digitalWrite(LEDR, HIGH);
+  digitalWrite(LEDG, LOW);
+  digitalWrite(LEDB, HIGH);
+}
+
+void showYellowLight() {
+  digitalWrite(LEDR, LOW);
   digitalWrite(LEDG, LOW);
   digitalWrite(LEDB, HIGH);
 }
