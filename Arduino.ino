@@ -43,6 +43,8 @@ bool WRITE_BUFFER_FIXED_LENGTH = false;
 BLECharacteristic readChar(uuidOfReadChar, BLEWriteWithoutResponse | BLEWrite, WRITE_BUFFER_SIZE, WRITE_BUFFER_FIXED_LENGTH);
 BLECharacteristic writeChar(uuidOfWriteChar, BLERead | BLENotify | BLEBroadcast, "123456789123456789123456789123456789123456789123456789123456789123456789");
 
+bool isOpen = false;
+
 void setup() {
   Serial.begin(9600);
   while (!Serial);
@@ -66,12 +68,16 @@ void loop() {
 
     IMU.readMagneticField(xMag, yMag, zMag);
 
-    if(zMag < 350) {
+    if (zMag < 350 && !isOpen) {
       showRedLight();
       Serial.println("Door open");
-    } else {
+      writeChar.writeValue("notifications: Door has been opened");
+      isOpen = true;
+    } else if (zMag >= 350 && isOpen) {
       turnOffLED();
       Serial.println("Door closed");
+      writeChar.writeValue("notifications: Door has been closed");
+      isOpen = false;
     }
   }
 }
