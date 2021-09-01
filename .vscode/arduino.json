@@ -1,0 +1,7 @@
+{
+    "port": "COM4",
+    "board": "arduino:mbed_nano:nano33ble",
+    "sketch": "Arduino.ino",
+    "output": "build",
+    "programmer": "arduino:cmsis-dap"
+}
