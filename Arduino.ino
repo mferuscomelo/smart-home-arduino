@@ -96,8 +96,8 @@ void loop() {
     float temperature = HTS.readTemperature();
     float humidity = HTS.readHumidity();
 
-    String temperatureString = String("temperature: ") + String(temperature, 2);
-    String humidityString = String("humidity: ") + String(humidity, 2);
+    String temperatureString = String("temperature: ") + String(temperature, 0);
+    String humidityString = String("humidity: ") + String(humidity, 0);
 
     writeChar.writeValue(temperatureString.c_str());
     writeChar.writeValue(humidityString.c_str());
