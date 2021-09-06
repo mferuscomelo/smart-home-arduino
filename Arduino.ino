@@ -1,34 +1,33 @@
 #include <ArduinoBLE.h>
 #include <Arduino_HTS221.h> // Temperature & Humidity
 #include <Arduino_LSM9DS1.h> // Magnetometer
-#include <Arduino_LPS22HB.h> // Pressure
 
 #define LEDR (22u)
 #define LEDG (23u)
 #define LEDB (24u)
 
-#define INTERVAL 10000 // ms
+#define INTERVAL 60000 // ms
 
-#define DEBUG true // Comment this out to compile code for production
+// #define DEBUG true // Comment this out to compile code for production
 
-// Replacement class for Serial
-#if !DEBUG
-class NullSerialClass
-{
-  public:
-  void begin(int speed) {}
-  void println(int xMag, int type=DEC) {}
-  void println(const char *p=NULL) {}
-  void println(const String p) {}
-  void print(int xMag, int type=DEC) {}
-  void print(const char *p) {}
-  void print(const String p) {}
-  int available() {return 0;}
-  int read() {return -1;}
-  void flush() {}
-} NullSerial;
-#define Serial NullSerial
-#endif
+// // Replacement class for Serial
+// #if !DEBUG
+// class NullSerialClass
+// {
+//   public:
+//   void begin(int speed) {}
+//   void println(int xMag, int type=DEC) {}
+//   void println(const char *p=NULL) {}
+//   void println(const String p) {}
+//   void print(int xMag, int type=DEC) {}
+//   void print(const char *p) {}
+//   void print(const String p) {}
+//   int available() {return 0;}
+//   int read() {return -1;}
+//   void flush() {}
+// } NullSerial;
+// #define Serial NullSerial
+// #endif
 
 // Device info
 const char* nameOfPeripheral = "Arduino Nano 33 BLE Sense";
@@ -51,9 +50,9 @@ bool isOpen = false;
 unsigned long lastRefreshTime = 0;
 
 void setup() {
-  Serial.begin(9600);
-  while (!Serial);
-  Serial.println("Started");
+  // Serial.begin(9600);
+  // while (!Serial);
+  // Serial.println("Started");
 
   // Initialize LED pins
   initLED();
@@ -63,9 +62,6 @@ void setup() {
 
   // Initialize HTS
   initHTS();
-
-  // Initialize Baro
-  initBaro();
 
   // Initialize BLE
   initBLE();
@@ -82,12 +78,12 @@ void loop() {
 
     if (zMag < 350 && !isOpen) {
       showRedLight();
-      Serial.println("Door open");
+      // Serial.println("Door open");
       writeChar.writeValue("notifications: Door has been opened");
       isOpen = true;
     } else if (zMag >= 350 && isOpen) {
       turnOffLED();
-      Serial.println("Door closed");
+      // Serial.println("Door closed");
       writeChar.writeValue("notifications: Door has been closed");
       isOpen = false;
     }
@@ -99,35 +95,25 @@ void loop() {
 
     float temperature = HTS.readTemperature();
     float humidity = HTS.readHumidity();
-    float pressure = BARO.readPressure();
 
     String temperatureString = String("temperature: ") + String(temperature, 2);
     String humidityString = String("humidity: ") + String(humidity, 2);
-    String pressureString = String("pressure: ") + String(pressure, 2);
 
     writeChar.writeValue(temperatureString.c_str());
     writeChar.writeValue(humidityString.c_str());
-    writeChar.writeValue(pressureString.c_str());
   }
 }
 
 void initIMU() {
   if (!IMU.begin()) {
-    Serial.println("Failed to initialize IMU!");
+    // Serial.println("Failed to initialize IMU!");
     while (1);
   }
 }
 
 void initHTS() {
   if (!HTS.begin()) {
-    Serial.println("Failed to initialize humidity temperature sensor!");
-    while (1);
-  }
-}
-
-void initBaro() {
-  if (!BARO.begin()) {
-    Serial.println("Failed to initialize pressure sensor!");
+    // Serial.println("Failed to initialize humidity temperature sensor!");
     while (1);
   }
 }
@@ -143,7 +129,7 @@ void initLED() {
 
 void initBLE() {
   if (!BLE.begin()) {
-    Serial.println("Failed to initialize BLE!");
+    // Serial.println("Failed to initialize BLE!");
     while (1);
   }
 
@@ -165,20 +151,20 @@ void initBLE() {
   BLE.advertise();
 
   // Print out full UUID and MAC address.
-  Serial.println("Peripheral advertising info: ");
-  Serial.print("Name: ");
-  Serial.println(nameOfPeripheral);
-  Serial.print("MAC: ");
-  Serial.println(BLE.address());
-  Serial.print("Service UUID: ");
-  Serial.println(IMUService.uuid());
-  Serial.print("readCharacteristic UUID: ");
-  Serial.println(uuidOfReadChar);
-  Serial.print("writeCharacteristic UUID: ");
-  Serial.println(uuidOfWriteChar);
+  // Serial.println("Peripheral advertising info: ");
+  // Serial.print("Name: ");
+  // Serial.println(nameOfPeripheral);
+  // Serial.print("MAC: ");
+  // Serial.println(BLE.address());
+  // Serial.print("Service UUID: ");
+  // Serial.println(IMUService.uuid());
+  // Serial.print("readCharacteristic UUID: ");
+  // Serial.println(uuidOfReadChar);
+  // Serial.print("writeCharacteristic UUID: ");
+  // Serial.println(uuidOfWriteChar);
 
 
-  Serial.println("Bluetooth device active, waiting for connections...");
+  // Serial.println("Bluetooth device active, waiting for connections...");
 
   showYellowLight();
 }
@@ -198,8 +184,8 @@ void onGetData(BLEDevice central, BLECharacteristic characteristic) {
     command += (char)bytes[i];
   }
 
-  Serial.print("Received Command: ");
-  Serial.println(command);
+  // Serial.print("Received Command: ");
+  // Serial.println(command);
 
   if(command == "verify_connection") {
     writeChar.writeValue("y");
@@ -207,14 +193,14 @@ void onGetData(BLEDevice central, BLECharacteristic characteristic) {
 }
 
 void onBLEConnected(BLEDevice central) {
-  Serial.print("Connected event, central: ");
-  Serial.println(central.address());
+  // Serial.print("Connected event, central: ");
+  // Serial.println(central.address());
   showGreenLight();
 }
 
 void onBLEDisconnected(BLEDevice central) {
-  Serial.print("Disconnected event, central: ");
-  Serial.println(central.address());
+  // Serial.print("Disconnected event, central: ");
+  // Serial.println(central.address());
   showYellowLight();
 }
 
